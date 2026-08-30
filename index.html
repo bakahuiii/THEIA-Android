@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <title>THEIA-Android</title>
+    <script>
+      // Keep legacy Android WebView APIs available before module evaluation.
+      var theiaObjectHasOwn = Object['has' + 'Own'];
+      if (typeof theiaObjectHasOwn !== 'function') Object['has' + 'Own'] = function (value, property) { var target = Object(value); return typeof Object.getOwnPropertyDescriptor === 'function' ? Object.getOwnPropertyDescriptor(target, property) !== undefined : Object.getOwnPropertyNames(target).indexOf(String(property)) !== -1 };
+      if (typeof Object.fromEntries !== 'function') Object.fromEntries = function (entries) { var result = {}; (entries || []).forEach(function (entry) { if (entry && entry.length >= 2) result[entry[0]] = entry[1] }); return result };
+      if (typeof String.prototype.padEnd !== 'function') String.prototype.padEnd = function (length, fill) { var target = Math.max(0, Number(length) || 0); var text = String(this); var filler = String(fill || ' '); if (text.length >= target || !filler) return text; while (filler.length < target - text.length) filler += filler; return text + filler.slice(0, target - text.length) };
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

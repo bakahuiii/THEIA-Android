@@ -1,0 +1,93 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "io.github.bakahuiii.theia.basic"
+    compileSdk rootProject.ext.compileSdkVersion
+    def releaseSigningFile = rootProject.file('keystore.properties')
+    def releaseSigningProperties = new Properties()
+    if (releaseSigningFile.exists()) {
+        releaseSigningProperties.load(new FileInputStream(releaseSigningFile))
+    }
+    if (releaseSigningFile.exists()) {
+        signingConfigs {
+            release {
+                storeFile rootProject.file(releaseSigningProperties['storeFile'])
+                storePassword releaseSigningProperties['storePassword']
+                keyAlias releaseSigningProperties['keyAlias']
+                keyPassword releaseSigningProperties['keyPassword']
+            }
+        }
+    }
+    defaultConfig {
+        applicationId "io.github.bakahuiii.theia.basic"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 6
+        versionName "1.0.5"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            // No publisher keystore is configured in this local checkout.
+            // Keep release builds directly installable for local testing;
+            // replace this with the publisher signing config before release.
+            signingConfig releaseSigningFile.exists() ? signingConfigs.release : null
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Patch every variant because the generated bridge is copied separately for
+// debug and release. This keeps the APK independent from the WebView's
+// prototype implementation.
+tasks.configureEach { task ->
+    if (task.name.startsWith('merge') && task.name.endsWith('Assets')) {
+        task.doLast {
+            fileTree("$buildDir/intermediates/assets").matching {
+                include "**/${task.name}/native-bridge.js"
+            }.files.each { bridge ->
+                def source = bridge.getText('UTF-8')
+                def patched = source.replace(
+                        'Object.prototype.hasOwnProperty.call(cap.Plugins, name)',
+                        '(typeof Object.getOwnPropertyDescriptor === "function" ? Object.getOwnPropertyDescriptor(Object(cap.Plugins), name) !== undefined : Object.getOwnPropertyNames(Object(cap.Plugins)).indexOf(String(name)) !== -1)'
+                )
+                if (patched != source) bridge.write(patched, 'UTF-8')
+            }
+        }
+    }
+}
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
