@@ -1,4 +1,4 @@
-#最初版的BetterBUCT，已废弃。
+# 最初版的BetterBUCT，已废弃。
 
 ----
 ----
